@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Lock, Users, Clock, ExternalLink, CheckCircle, Copy, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { submitBid } from "@/services/api";
 
 const mockTender = {
   id: "TND-A1B2C3",
@@ -51,13 +52,26 @@ export default function TenderDetails() {
       toast({ title: "Missing fields", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
+    
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 2500));
-    setLoading(false);
-    const hash = "0x" + Math.random().toString(16).substring(2, 18).toUpperCase();
-    const txId = Math.random().toString(36).substring(2, 14).toUpperCase() + Math.random().toString(36).substring(2, 14).toUpperCase();
-    setBidSuccess({ hash, txId });
-    toast({ title: "Bid Submitted!", description: "Your bid has been sealed on Algorand" });
+    try {
+      const response = await submitBid({
+        tender_id: tender.id,
+        vendor_name: form.company,
+        proposal: form.proposal || "Standard proposal",
+        price: parseFloat(form.price)
+      });
+      
+      setBidSuccess({ 
+        hash: response.bid_hash, 
+        txId: response.tx_id 
+      });
+      toast({ title: "Bid Submitted!", description: "Your bid has been sealed on Algorand" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to submit bid", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copy = (text: string) => {

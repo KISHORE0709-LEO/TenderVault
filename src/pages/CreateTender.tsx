@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Minus, Lock, AlertTriangle, CheckCircle, ExternalLink, Copy, Loader2, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { createTender } from "@/services/api";
 
 interface Criterion {
   id: string;
@@ -64,17 +65,29 @@ export default function CreateTender() {
       toast({ title: "Missing fields", description: "Please fill all required fields", variant: "destructive" });
       return;
     }
+    
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 2800));
-    setLoading(false);
-    const tenderId = "TND-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const appId = "847392018";
-    setSuccess({
-      tenderId,
-      appId,
-      explorerLink: `https://testnet.algoexplorer.io/application/${appId}`,
-      tenderLink: `${window.location.origin}/tenders/${tenderId}`,
-    });
+    try {
+      const criteriaObj = criteria.reduce((acc, c) => ({ ...acc, [c.name]: c.weight }), {});
+      const response = await createTender({
+        title: form.title,
+        description: form.description,
+        criteria: criteriaObj,
+        deadline: form.deadline
+      });
+      
+      setSuccess({
+        tenderId: response.tender_id,
+        appId: "755776827",
+        explorerLink: `https://lora.algokit.io/testnet/transaction/${response.tx_id}`,
+        tenderLink: `${window.location.origin}/tenders/${response.tender_id}`,
+      });
+      toast({ title: "Success!", description: "Tender created on Algorand" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to create tender", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copyText = (text: string) => {
