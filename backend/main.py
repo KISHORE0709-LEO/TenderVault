@@ -28,8 +28,8 @@ app.add_middleware(
 # Initialize Firebase
 try:
     if not firebase_admin._apps:
-        # Try to initialize with default credentials or environment
-        firebase_admin.initialize_app()
+        cred = credentials.Certificate('firebase-admin-key.json')
+        firebase_admin.initialize_app(cred)
     db = firestore.client()
     USE_FIREBASE = True
     print("✅ Firebase initialized successfully")

@@ -8,7 +8,6 @@ const navLinks = [
   { label: "Tenders", path: "/tenders" },
   { label: "Submit Bid", path: "/submit-bid" },
   { label: "Post a Tender", path: "/create-tender" },
-  { label: "Results", path: "/results/demo" },
   { label: "Transparency Portal", path: "/transparency" },
   { label: "About", path: "/about" },
 ];
