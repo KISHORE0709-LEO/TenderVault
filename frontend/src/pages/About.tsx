@@ -43,10 +43,8 @@ const techStack = [
 ];
 
 const team = [
-  { name: "Alex Mehta", role: "Blockchain Developer", avatar: "AM" },
-  { name: "Priya Sharma", role: "AI Engineer", avatar: "PS" },
-  { name: "Raj Patel", role: "Frontend Developer", avatar: "RP" },
-  { name: "Diya Nair", role: "Smart Contract Engineer", avatar: "DN" },
+  { name: "M Kishore", role: "Blockchain and Backend", avatar: "MK" },
+  { name: "CH V Sneha", role: "Frontend and AI", avatar: "CS" }
 ];
 
 export default function About() {
@@ -70,17 +68,17 @@ export default function About() {
         </div>
 
         {/* App ID Banner */}
-        <div className="glass-card-elevated rounded-2xl p-6 mb-16 border-glow text-center">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <div>
-              <div className="text-sm text-muted-foreground mb-1">Deployed App ID</div>
-              <div className="text-2xl font-bold font-mono text-primary">847392018</div>
+        <div className="glass-card-elevated rounded-2xl p-8 mb-16 border-glow">
+          <div className="flex flex-col items-center justify-center gap-6">
+            <div className="text-center">
+              <div className="text-sm text-muted-foreground mb-2">Deployed App ID</div>
+              <div className="text-3xl font-bold font-mono text-primary mb-6">847392018</div>
             </div>
             <a
               href="https://testnet.algoexplorer.io/application/847392018"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/10 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-primary/30 text-primary text-sm font-semibold hover:bg-primary/10 transition-all"
             >
               View on Algorand Testnet <ExternalLink className="w-4 h-4" />
             </a>
@@ -166,14 +164,14 @@ export default function About() {
         {/* Team */}
         <div>
           <h2 className="text-3xl font-bold text-center mb-10">The Team</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+          <div className="flex flex-wrap justify-center gap-8 max-w-2xl mx-auto">
             {team.map((member) => (
-              <div key={member.name} className="glass-card rounded-2xl p-6 text-center hover:scale-[1.02] transition-all duration-200">
-                <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary font-bold text-lg mx-auto mb-4 animate-pulse-glow">
+              <div key={member.name} className="glass-card rounded-2xl p-8 text-center hover:scale-[1.05] transition-all duration-200 min-w-[200px]">
+                <div className="w-20 h-20 rounded-2xl bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl mx-auto mb-4 animate-pulse-glow">
                   {member.avatar}
                 </div>
-                <div className="font-bold text-sm mb-1">{member.name}</div>
-                <div className="text-xs text-muted-foreground">{member.role}</div>
+                <div className="font-bold text-lg mb-2">{member.name}</div>
+                <div className="text-sm text-muted-foreground">{member.role}</div>
               </div>
             ))}
           </div>
