@@ -123,7 +123,9 @@ export default function TenderDetails() {
           </div>
         )}
 
-        {!loading && tender && (/* Tender Header */}
+        {!loading && tender && (
+          <>
+        {/* Tender Header */}
         <div className="glass-card-elevated rounded-2xl p-8 mb-6 border-glow">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
             <div>
@@ -301,6 +303,7 @@ export default function TenderDetails() {
             </a>
           </div>
         )}
+        </>
         )}
       </div>
     </div>
