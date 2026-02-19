@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Search, Eye, CheckCircle2, ExternalLink, ShieldCheck, Lock, Clock, Award, Zap, Loader2 } from "lucide-react";
 import { getTenders } from "@/services/api";
 
@@ -144,6 +145,12 @@ export default function Transparency() {
                   </div>
 
                   <div className="flex flex-col gap-2 sm:min-w-[160px]">
+                    <Link
+                      to={`/results/${r.id}`}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
+                    >
+                      View Results
+                    </Link>
                     <a
                       href={`https://testnet.algoexplorer.io/application/847392018`}
                       target="_blank"

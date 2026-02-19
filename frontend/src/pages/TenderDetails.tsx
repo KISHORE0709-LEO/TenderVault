@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Lock, Users, Clock, ExternalLink, CheckCircle, Copy, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Lock, Users, Clock, ExternalLink, CheckCircle, Copy, Loader2, AlertCircle, ArrowLeft, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { submitBid, getTender } from "@/services/api";
+import { submitBid, getTender, evaluateTender } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 const mockTender = {
   id: "TND-A1B2C3",
@@ -34,9 +35,11 @@ interface BidSuccess {
 
 export default function TenderDetails() {
   const { id } = useParams();
+  const { accountType } = useAuth();
   const [tender, setTender] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [bidLoading, setBidLoading] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
   const [bidSuccess, setBidSuccess] = useState<BidSuccess | null>(null);
   const [form, setForm] = useState({
     company: "",
@@ -109,6 +112,19 @@ export default function TenderDetails() {
     toast({ title: "Copied!" });
   };
 
+  const handleEvaluate = async () => {
+    setEvaluating(true);
+    try {
+      await evaluateTender(tender.id);
+      toast({ title: "Success!", description: "Bids evaluated successfully" });
+      loadTender(); // Refresh to show updated status
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to evaluate bids", variant: "destructive" });
+    } finally {
+      setEvaluating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-16">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -132,9 +148,38 @@ export default function TenderDetails() {
               <div className="text-xs text-muted-foreground font-mono mb-1">{tender.id}</div>
               <span className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{tender.orgType}</span>
             </div>
-            <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${tender.status === "OPEN" ? "badge-open" : "badge-closed"}`}>
-              {tender.status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${tender.status === "OPEN" ? "badge-open" : "badge-closed"}`}>
+                {tender.status}
+              </span>
+              {tender.status === "EVALUATED" && (
+                <Link
+                  to={`/results/${tender.id}`}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
+                >
+                  View Results
+                </Link>
+              )}
+              {tender.status === "OPEN" && accountType === "government" && tender.bids > 0 && (
+                <button
+                  onClick={handleEvaluate}
+                  disabled={evaluating}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50"
+                >
+                  {evaluating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Evaluating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Evaluate with AI
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="text-lg text-muted-foreground mb-1">{tender.organization}</div>
