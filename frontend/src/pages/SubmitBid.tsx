@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, FileText, Clock, Users, ChevronRight, ArrowRight, Shield } from "lucide-react";
+import { Search, FileText, Clock, Users, ChevronRight, ArrowRight, Shield, Loader2 } from "lucide-react";
+import { getTenders } from "@/services/api";
 
 const openTenders = [
   { id: "TND-2847", org: "Ministry of Education", title: "Digital Learning Platform Development", budget: 45000, deadline: "2026-03-15T23:59:00", bids: 12 },
@@ -18,12 +19,30 @@ function getCountdown(deadline: string) {
 
 const SubmitBid = () => {
   const [search, setSearch] = useState("");
+  const [tenders, setTenders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = openTenders.filter(
+  useEffect(() => {
+    loadTenders();
+  }, []);
+
+  const loadTenders = async () => {
+    try {
+      const response = await getTenders();
+      const openTenders = response.tenders.filter((t: any) => t.status === "OPEN");
+      setTenders(openTenders);
+    } catch (error) {
+      setTenders(openTenders);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = tenders.filter(
     (t) =>
       t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.org.toLowerCase().includes(search.toLowerCase()) ||
-      t.id.toLowerCase().includes(search.toLowerCase())
+      (t.organization || "").toLowerCase().includes(search.toLowerCase()) ||
+      t.tender_id.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -53,6 +72,12 @@ const SubmitBid = () => {
           </div>
 
           {/* Open Tenders */}
+          {loading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
+          {!loading && (
           <div className="space-y-4">
             {filtered.length === 0 && (
               <div className="glass-card p-8 text-center rounded-2xl">
@@ -62,25 +87,25 @@ const SubmitBid = () => {
             )}
             {filtered.map((tender) => (
               <div
-                key={tender.id}
+                key={tender.tender_id}
                 className="glass-card rounded-2xl p-5 hover:border-primary/30 transition-all duration-200"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-muted-foreground">{tender.id}</span>
+                      <span className="text-xs font-mono text-muted-foreground">{tender.tender_id}</span>
                       <span className="px-2 py-0.5 rounded-full text-xs font-semibold badge-open">OPEN</span>
                     </div>
                     <h3 className="font-semibold mb-1 truncate">{tender.title}</h3>
-                    <p className="text-sm text-primary mb-3">{tender.org}</p>
+                    <p className="text-sm text-primary mb-3">{tender.organization || "Unknown"}</p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="font-mono font-semibold text-primary">{tender.budget.toLocaleString()} ALGO</span>
+                      <span className="font-mono font-semibold text-primary">{(tender.budget || 0).toLocaleString()} ALGO</span>
                       <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{getCountdown(tender.deadline)}</span>
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{tender.bids} bids</span>
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{tender.bid_count || 0} bids</span>
                     </div>
                   </div>
                   <Link
-                    to={`/tender/${tender.id}`}
+                    to={`/tenders/${tender.tender_id}`}
                     className="flex items-center gap-2 text-sm shrink-0 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all"
                   >
                     Bid Now <ArrowRight className="w-4 h-4" />
@@ -89,6 +114,7 @@ const SubmitBid = () => {
               </div>
             ))}
           </div>
+          )}
 
           <div className="text-center mt-8">
             <Link to="/tenders" className="text-sm text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1">
