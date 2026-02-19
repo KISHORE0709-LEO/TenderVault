@@ -59,6 +59,9 @@ class TenderCreate(BaseModel):
     description: str
     criteria: dict
     deadline: str
+    organization: Optional[str] = None
+    orgType: Optional[str] = "Government"
+    budget: Optional[float] = 0
 
 class BidSubmit(BaseModel):
     tender_id: str
@@ -77,9 +80,13 @@ async def create_tender(tender: TenderCreate):
         "description": tender.description,
         "criteria": tender.criteria,
         "deadline": tender.deadline,
+        "organization": tender.organization,
+        "orgType": tender.orgType,
+        "budget": tender.budget,
         "criteria_hash": criteria_hash,
         "created_at": datetime.now().isoformat(),
-        "status": "OPEN"
+        "status": "OPEN",
+        "bid_count": 0
     }
     
     # Store in Firebase or memory
@@ -201,17 +208,34 @@ Score each bid 0-100 based on the criteria weights. Return ONLY valid JSON: {{"s
     
     return {"message": "Evaluation complete", "results": result}
 
+@app.get("/api/tenders")
+async def get_all_tenders():
+    if USE_FIREBASE:
+        tenders_ref = db.collection("tenders").stream()
+        tenders = [tender.to_dict() for tender in tenders_ref]
+    else:
+        tenders = list(tenders_db.values())
+    return {"tenders": tenders}
+
 @app.get("/api/tender/{tender_id}")
 async def get_tender(tender_id: str):
     if USE_FIREBASE:
         tender_doc = db.collection("tenders").document(tender_id).get()
         if not tender_doc.exists:
             raise HTTPException(status_code=404, detail="Tender not found")
-        return tender_doc.to_dict()
+        tender = tender_doc.to_dict()
+        # Get bid count
+        bids_ref = db.collection("bids").where("tender_id", "==", tender_id).stream()
+        bid_count = len(list(bids_ref))
+        tender["bid_count"] = bid_count
+        return tender
     else:
         if tender_id not in tenders_db:
             raise HTTPException(status_code=404, detail="Tender not found")
-        return tenders_db[tender_id]
+        tender = tenders_db[tender_id]
+        bid_count = len([b for b in bids_db.values() if b["tender_id"] == tender_id])
+        tender["bid_count"] = bid_count
+        return tender
 
 @app.get("/api/results/{tender_id}")
 async def get_results(tender_id: str):
