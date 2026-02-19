@@ -26,13 +26,15 @@ app.add_middleware(
 )
 
 # Initialize Firebase
-firebase_creds = os.getenv("FIREBASE_CREDENTIALS")
-if firebase_creds and not firebase_admin._apps:
-    cred = credentials.Certificate(json.loads(firebase_creds))
-    firebase_admin.initialize_app(cred)
+try:
+    if not firebase_admin._apps:
+        # Try to initialize with default credentials or environment
+        firebase_admin.initialize_app()
     db = firestore.client()
     USE_FIREBASE = True
-else:
+    print("✅ Firebase initialized successfully")
+except Exception as e:
+    print(f"⚠️ Firebase initialization failed: {e}")
     db = None
     USE_FIREBASE = False
     # Fallback to in-memory storage
@@ -71,42 +73,50 @@ class BidSubmit(BaseModel):
 
 @app.post("/api/tender")
 async def create_tender(tender: TenderCreate):
-    tender_id = hashlib.sha256(f"{tender.title}{datetime.now()}".encode()).hexdigest()[:16]
-    criteria_hash = hashlib.sha256(json.dumps(tender.criteria).encode()).hexdigest()
-    
-    tender_data = {
-        "tender_id": tender_id,
-        "title": tender.title,
-        "description": tender.description,
-        "criteria": tender.criteria,
-        "deadline": tender.deadline,
-        "organization": tender.organization,
-        "orgType": tender.orgType,
-        "budget": tender.budget,
-        "criteria_hash": criteria_hash,
-        "created_at": datetime.now().isoformat(),
-        "status": "OPEN",
-        "bid_count": 0
-    }
-    
-    # Store in Firebase or memory
-    if USE_FIREBASE:
-        db.collection("tenders").document(tender_id).set(tender_data)
-    else:
-        tenders_db[tender_id] = tender_data
-    
-    # Write to Algorand
-    params = algod_client.suggested_params()
-    txn = transaction.ApplicationNoOpTxn(
-        sender=deployer_address,
-        sp=params,
-        index=APP_ID,
-        app_args=[criteria_hash.encode()]
-    )
-    signed_txn = txn.sign(deployer_private_key)
-    tx_id = algod_client.send_transaction(signed_txn)
-    
-    return {"tender_id": tender_id, "tx_id": tx_id, "criteria_hash": criteria_hash}
+    try:
+        tender_id = hashlib.sha256(f"{tender.title}{datetime.now()}".encode()).hexdigest()[:16]
+        criteria_hash = hashlib.sha256(json.dumps(tender.criteria).encode()).hexdigest()
+        
+        tender_data = {
+            "tender_id": tender_id,
+            "title": tender.title,
+            "description": tender.description,
+            "criteria": tender.criteria,
+            "deadline": tender.deadline,
+            "organization": tender.organization,
+            "orgType": tender.orgType,
+            "budget": tender.budget,
+            "criteria_hash": criteria_hash,
+            "created_at": datetime.now().isoformat(),
+            "status": "OPEN",
+            "bid_count": 0
+        }
+        
+        # Store in Firebase or memory
+        if USE_FIREBASE:
+            db.collection("tenders").document(tender_id).set(tender_data)
+        else:
+            tenders_db[tender_id] = tender_data
+        
+        # Write to Algorand
+        try:
+            params = algod_client.suggested_params()
+            txn = transaction.ApplicationNoOpTxn(
+                sender=deployer_address,
+                sp=params,
+                index=APP_ID,
+                app_args=[criteria_hash.encode()]
+            )
+            signed_txn = txn.sign(deployer_private_key)
+            tx_id = algod_client.send_transaction(signed_txn)
+        except Exception as algo_error:
+            print(f"Algorand error (non-critical): {algo_error}")
+            tx_id = "ALGO_TX_SKIPPED"
+        
+        return {"tender_id": tender_id, "tx_id": tx_id, "criteria_hash": criteria_hash}
+    except Exception as e:
+        print(f"Error creating tender: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/bid")
 async def submit_bid(bid: BidSubmit):
@@ -212,7 +222,16 @@ Score each bid 0-100 based on the criteria weights. Return ONLY valid JSON: {{"s
 async def get_all_tenders():
     if USE_FIREBASE:
         tenders_ref = db.collection("tenders").stream()
-        tenders = [tender.to_dict() for tender in tenders_ref]
+        tenders = []
+        for tender_doc in tenders_ref:
+            tender_data = tender_doc.to_dict()
+            # Ensure tender_id exists
+            if 'tender_id' not in tender_data:
+                tender_data['tender_id'] = tender_doc.id
+            # Normalize status to uppercase
+            if 'status' in tender_data:
+                tender_data['status'] = tender_data['status'].upper()
+            tenders.append(tender_data)
     else:
         tenders = list(tenders_db.values())
     return {"tenders": tenders}

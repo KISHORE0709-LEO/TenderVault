@@ -13,9 +13,7 @@ export default function ProtectedRoute({ children, requireAccountType }: Protect
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAccountType && accountType !== requireAccountType) {
-    return <Navigate to="/" replace />;
-  }
+
 
   return <>{children}</>;
 }

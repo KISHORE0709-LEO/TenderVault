@@ -1,72 +1,54 @@
-import { useState } from "react";
-import { Search, Eye, CheckCircle2, ExternalLink, ShieldCheck, Lock, Clock, Award, Zap } from "lucide-react";
-
-const mockResults = [
-  {
-    id: "TND-A1B2C3",
-    title: "Construction of Public Hospital Wing B",
-    organization: "Ministry of Health",
-    status: "AWARDED",
-    winner: "BuildRight Ltd.",
-    bids: 5,
-    completedAt: "2026-02-01",
-    auditTrail: [
-      { step: "Tender Created", hash: "ALGO7X3K...A1B2", timestamp: "2026-01-15 09:00 UTC" },
-      { step: "Bids Sealed", hash: "ALGOMNP2...C3D4", timestamp: "2026-01-15 09:30 UTC" },
-      { step: "Deadline Hit", hash: "ALGOE5F6...G7H8", timestamp: "2026-02-01 17:00 UTC" },
-      { step: "Criteria Revealed", hash: "ALGOI9J0...K1L2", timestamp: "2026-02-01 17:00 UTC" },
-      { step: "AI Evaluated", hash: "ALGOM3N4...O5P6", timestamp: "2026-02-01 17:01 UTC" },
-      { step: "Winner Declared", hash: "ALGOQ7R8...S9T0", timestamp: "2026-02-01 17:02 UTC" },
-    ],
-  },
-  {
-    id: "TND-G7H8I9",
-    title: "Medical Equipment Procurement 2026",
-    organization: "City Hospital",
-    status: "CLOSED",
-    winner: null,
-    bids: 11,
-    completedAt: "2026-01-28",
-    auditTrail: [
-      { step: "Tender Created", hash: "ALGOA1B2...C3D4", timestamp: "2026-01-10 10:00 UTC" },
-      { step: "Bids Sealed", hash: "ALGOE5F6...G7H8", timestamp: "2026-01-10 11:00 UTC" },
-      { step: "Deadline Hit", hash: "ALGOI9J0...K1L2", timestamp: "2026-01-28 18:00 UTC" },
-      { step: "Criteria Revealed", hash: "ALGOM3N4...O5P6", timestamp: "2026-01-28 18:00 UTC" },
-      { step: "AI Evaluated", hash: "ALGOQ7R8...S9T0", timestamp: "2026-01-28 18:01 UTC" },
-      { step: "Winner Declared", hash: "ALGOU1V2...W3X4", timestamp: "2026-01-28 18:02 UTC" },
-    ],
-  },
-  {
-    id: "TND-J1K2L3",
-    title: "Enterprise Software Licensing",
-    organization: "Nexgen Corp",
-    status: "AWARDED",
-    winner: "TechCore Solutions",
-    bids: 6,
-    completedAt: "2026-01-20",
-    auditTrail: [
-      { step: "Tender Created", hash: "ALGOY5Z6...A7B8", timestamp: "2026-01-05 08:00 UTC" },
-      { step: "Bids Sealed", hash: "ALGOC9D0...E1F2", timestamp: "2026-01-05 09:00 UTC" },
-      { step: "Deadline Hit", hash: "ALGOG3H4...I5J6", timestamp: "2026-01-20 16:00 UTC" },
-      { step: "Criteria Revealed", hash: "ALGOK7L8...M9N0", timestamp: "2026-01-20 16:00 UTC" },
-      { step: "AI Evaluated", hash: "ALGOO1P2...Q3R4", timestamp: "2026-01-20 16:01 UTC" },
-      { step: "Winner Declared", hash: "ALGOS5T6...U7V8", timestamp: "2026-01-20 16:02 UTC" },
-    ],
-  },
-];
+import { useState, useEffect } from "react";
+import { Search, Eye, CheckCircle2, ExternalLink, ShieldCheck, Lock, Clock, Award, Zap, Loader2 } from "lucide-react";
+import { getTenders } from "@/services/api";
 
 export default function Transparency() {
   const [search, setSearch] = useState("");
-  const [results, setResults] = useState(mockResults);
+  const [allResults, setAllResults] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTenders();
+  }, []);
+
+  const loadTenders = async () => {
+    try {
+      const response = await getTenders();
+      const evaluatedTenders = response.tenders
+        .filter((t: any) => t.status === "EVALUATED" || t.status === "AWARDED" || t.status === "CLOSED")
+        .map((t: any) => ({
+          id: t.tender_id,
+          title: t.title,
+          organization: t.organization || "Unknown",
+          status: t.status,
+          winner: null,
+          bids: t.bid_count || 0,
+          completedAt: new Date(t.deadline).toISOString().split('T')[0],
+          auditTrail: [
+            { step: "Tender Created", hash: t.criteria_hash?.substring(0, 12) || "ALGO...", timestamp: new Date(t.created_at).toUTCString() },
+            { step: "Deadline Hit", hash: t.criteria_hash?.substring(12, 24) || "ALGO...", timestamp: new Date(t.deadline).toUTCString() },
+          ],
+        }));
+      setAllResults(evaluatedTenders);
+      setResults(evaluatedTenders);
+    } catch (error) {
+      console.error("Failed to load tenders:", error);
+      setAllResults([]);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = (val: string) => {
     setSearch(val);
     const q = val.toLowerCase();
     setResults(
       q
-        ? mockResults.filter((r) => r.id.toLowerCase().includes(q) || r.organization.toLowerCase().includes(q) || r.title.toLowerCase().includes(q))
-        : mockResults
+        ? allResults.filter((r) => r.id.toLowerCase().includes(q) || r.organization.toLowerCase().includes(q) || r.title.toLowerCase().includes(q))
+        : allResults
     );
   };
 
@@ -116,9 +98,17 @@ export default function Transparency() {
           />
         </div>
 
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
         {/* Results */}
-        <div className="space-y-4">
-          {results.map((r) => (
+        {!loading && (
+          <div className="space-y-4">
+            {results.map((r) => (
             <div key={r.id} className="glass-card rounded-2xl p-6 hover:border-primary/30 border border-border transition-all duration-200">
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
@@ -213,9 +203,10 @@ export default function Transparency() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
 
-        {results.length === 0 && (
+        {!loading && results.length === 0 && (
           <div className="text-center py-20">
             <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-30" />
             <div className="text-muted-foreground">No tenders found for "{search}"</div>

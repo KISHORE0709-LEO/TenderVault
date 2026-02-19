@@ -3,68 +3,7 @@ import { Link } from "react-router-dom";
 import { Search, Filter, Clock, Users, ChevronRight, ArrowUpDown, Loader2 } from "lucide-react";
 import { getTenders } from "@/services/api";
 
-const mockTenders = [
-  {
-    id: "TND-A1B2C3",
-    title: "Construction of Public Hospital Wing B",
-    organization: "Ministry of Health",
-    orgType: "Government",
-    budget: 250000,
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 12),
-    bids: 8,
-    status: "OPEN",
-  },
-  {
-    id: "TND-D4E5F6",
-    title: "University Campus Network Upgrade",
-    organization: "State University",
-    orgType: "College",
-    budget: 85000,
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 4),
-    bids: 14,
-    status: "OPEN",
-  },
-  {
-    id: "TND-G7H8I9",
-    title: "Medical Equipment Procurement 2026",
-    organization: "City Hospital",
-    orgType: "Hospital",
-    budget: 420000,
-    deadline: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    bids: 11,
-    status: "CLOSED",
-  },
-  {
-    id: "TND-J1K2L3",
-    title: "Enterprise Software Licensing",
-    organization: "Nexgen Corp",
-    orgType: "Enterprise",
-    budget: 150000,
-    deadline: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
-    bids: 6,
-    status: "AWARDED",
-  },
-  {
-    id: "TND-M4N5O6",
-    title: "Road Infrastructure Development Phase 3",
-    organization: "Transport Authority",
-    orgType: "Government",
-    budget: 890000,
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 20),
-    bids: 3,
-    status: "OPEN",
-  },
-  {
-    id: "TND-P7Q8R9",
-    title: "Smart City IoT Deployment",
-    organization: "Municipal Corporation",
-    orgType: "Government",
-    budget: 340000,
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-    bids: 9,
-    status: "OPEN",
-  },
-];
+
 
 function getCountdown(deadline: Date) {
   const diff = deadline.getTime() - Date.now();
@@ -117,8 +56,8 @@ export default function BrowseTenders() {
       setTenders(tendersData);
     } catch (error) {
       console.error("Failed to load tenders:", error);
-      setAllTenders(mockTenders);
-      setTenders(mockTenders);
+      setAllTenders([]);
+      setTenders([]);
     } finally {
       setLoading(false);
     }

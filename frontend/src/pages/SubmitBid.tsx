@@ -3,11 +3,7 @@ import { Link } from "react-router-dom";
 import { Search, FileText, Clock, Users, ChevronRight, ArrowRight, Shield, Loader2 } from "lucide-react";
 import { getTenders } from "@/services/api";
 
-const openTenders = [
-  { id: "TND-2847", org: "Ministry of Education", title: "Digital Learning Platform Development", budget: 45000, deadline: "2026-03-15T23:59:00", bids: 12 },
-  { id: "TND-2846", org: "City General Hospital", title: "Medical Equipment Procurement", budget: 120000, deadline: "2026-03-10T18:00:00", bids: 8 },
-  { id: "TND-2843", org: "State Transport Authority", title: "Fleet Management System", budget: 63000, deadline: "2026-03-20T17:00:00", bids: 6 },
-];
+
 
 function getCountdown(deadline: string) {
   const diff = new Date(deadline).getTime() - Date.now();
@@ -32,7 +28,8 @@ const SubmitBid = () => {
       const openTenders = response.tenders.filter((t: any) => t.status === "OPEN");
       setTenders(openTenders);
     } catch (error) {
-      setTenders(openTenders);
+      console.error("Failed to load tenders:", error);
+      setTenders([]);
     } finally {
       setLoading(false);
     }
