@@ -11,5 +11,5 @@ services:
         sync: false
       - key: ALGORAND_APP_ID
         sync: false
-      - key: FIREBASE_CREDENTIALS
+      - key: FIREBASE_PROJECT_ID
         sync: false
