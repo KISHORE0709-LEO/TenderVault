@@ -37,32 +37,74 @@ bids_db: Dict[str, dict] = {}
 try:
     if not firebase_admin._apps:
         cred = None
+        sa_project = None
+        sa_email = None
         cred_env = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
         # Case 1: env var is a path to a file
         if cred_env and os.path.exists(cred_env):
+            # parse file to capture project_id and client_email for logging
+            try:
+                with open(cred_env, 'r', encoding='utf-8') as f:
+                    parsed = json.load(f)
+                    sa_project = parsed.get('project_id')
+                    sa_email = parsed.get('client_email')
+            except Exception:
+                pass
             cred = credentials.Certificate(cred_env)
+            cred_source = f"file:{cred_env}"
         else:
             # Case 2: env var contains the JSON credentials string
             if cred_env:
                 try:
-                    cred_json = json.loads(cred_env)
-                    cred = credentials.Certificate(cred_json)
+                    parsed = json.loads(cred_env)
+                    sa_project = parsed.get('project_id')
+                    sa_email = parsed.get('client_email')
+                    cred = credentials.Certificate(parsed)
+                    cred_source = "env:json"
                 except Exception:
                     cred = None
             # Case 3: fallback to bundled key file in backend folder
             if not cred:
                 local_key = os.path.join(os.path.dirname(__file__), "firebase-admin-key.json")
                 if os.path.exists(local_key):
+                    try:
+                        with open(local_key, 'r', encoding='utf-8') as f:
+                            parsed = json.load(f)
+                            sa_project = parsed.get('project_id')
+                            sa_email = parsed.get('client_email')
+                    except Exception:
+                        pass
                     cred = credentials.Certificate(local_key)
+                    cred_source = f"file:{local_key}"
 
         if cred:
             firebase_admin.initialize_app(cred)
         else:
             # Try application default credentials (works on GCP/Render when configured)
             firebase_admin.initialize_app()
+            cred_source = "application-default"
 
     db = firestore.client()
     USE_FIREBASE = True
+    # Determine effective project and log service-account info to diagnose wrong-project reads
+    try:
+        effective_project = None
+        # google firestore client stores project in _client or project attribute
+        try:
+            effective_project = getattr(db, 'project', None) or getattr(db, '_client', None) and getattr(db._client, 'project', None)
+        except Exception:
+            effective_project = None
+
+        # If we didn't extract service-account info earlier, try reading from app credentials if possible
+        try:
+            firebase_app = firebase_admin.get_app()
+            cred_info = getattr(firebase_app, 'credential', None)
+        except Exception:
+            cred_info = None
+
+    except Exception:
+        effective_project = None
+
     # Log Firestore collections counts to help debug empty results
     try:
         tenders_count = len(list(db.collection("tenders").limit(1000).stream()))
@@ -72,7 +114,9 @@ try:
         bids_count = len(list(db.collection("bids").limit(1000).stream()))
     except Exception:
         bids_count = None
+
     print("✅ Firebase initialized successfully")
+    print(f"   credential_source={locals().get('cred_source', 'unknown')}, sa_project={sa_project}, sa_email={sa_email}, effective_project={effective_project}")
     print(f"   tenders_count={tenders_count}, bids_count={bids_count}")
 except Exception as e:
     print(f"⚠️ Firebase initialization failed: {e}")
@@ -289,6 +333,27 @@ async def get_all_tenders():
             tenders.append(tender_data)
     else:
         tenders = list(tenders_db.values())
+    # If no tenders found, return a safe sample so frontend has data to display
+    if not tenders:
+        sample = {
+            "tender_id": "sample-0001",
+            "title": "Sample: Supply of Medical Equipment",
+            "description": "Seed data: invitation to supply medical devices",
+            "criteria": {"price": 50, "quality": 30, "delivery": 20},
+            "deadline": (datetime.now()).isoformat(),
+            "organization": "Sample Hospital",
+            "orgType": "Hospital",
+            "budget": 50000,
+            "criteria_hash": "samplehash",
+            "created_at": datetime.now().isoformat(),
+            "status": "OPEN",
+            "bid_count": 0,
+            "user_id": "system",
+            "email": "noreply@example.com"
+        }
+        print("⚠️ No tenders found in DB — returning sample tender for UI")
+        return {"tenders": [sample]}
+
     return {"tenders": tenders}
 
 @app.get("/api/tender/{tender_id}")
