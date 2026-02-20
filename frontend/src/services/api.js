@@ -45,8 +45,11 @@ export const submitBid = async (bidData) => {
 
 export const getTenders = async () => {
   try {
+    console.log('Fetching tenders from:', `${BASE_URL}/api/tenders`);
     const response = await fetch(`${BASE_URL}/api/tenders`);
-    return await handleResponse(response);
+    const data = await handleResponse(response);
+    console.log('Tenders received:', data);
+    return data;
   } catch (error) {
     handleError(error, 'Get Tenders');
   }
