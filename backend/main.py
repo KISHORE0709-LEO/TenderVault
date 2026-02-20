@@ -34,13 +34,12 @@ app.add_middleware(
 # Initialize Firebase
 try:
     if not firebase_admin._apps:
-        # Try secret file path first (for Render), then local path
-        cred_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', 'firebase-admin-key.json')
-        if os.path.exists(cred_path):
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if cred_path and os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
         else:
-            cred = credentials.Certificate('firebase-admin-key.json')
-        firebase_admin.initialize_app(cred)
+            firebase_admin.initialize_app()
     db = firestore.client()
     USE_FIREBASE = True
     print("✅ Firebase initialized successfully")
@@ -48,7 +47,6 @@ except Exception as e:
     print(f"⚠️ Firebase initialization failed: {e}")
     db = None
     USE_FIREBASE = False
-    # Fallback to in-memory storage
     tenders_db: Dict[str, dict] = {}
     bids_db: Dict[str, dict] = {}
 
