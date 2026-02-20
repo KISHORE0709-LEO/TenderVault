@@ -29,8 +29,12 @@ app.add_middleware(
 # Initialize Firebase
 try:
     if not firebase_admin._apps:
-        cred = credentials.Certificate('firebase-admin-key.json')
-        firebase_admin.initialize_app(cred)
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if cred_path and os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+        else:
+            firebase_admin.initialize_app()
     db = firestore.client()
     USE_FIREBASE = True
     print("✅ Firebase initialized successfully")
